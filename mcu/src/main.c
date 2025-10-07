@@ -27,6 +27,8 @@ int main(void) {
     // Counting timer (TIM6): used to measure time between edges
     initTIM(COUNT_TIM);  // this will start counting continuously
 
+    COUNT_TIM->CR1 |= TIM_CR1_CEN;  // start counting
+
 
     // TOD0: check
     // 1. Enable SYSCFG clock domain in RCC
@@ -36,24 +38,21 @@ int main(void) {
     
     SYSCFG->EXTICR[2] |= _VAL2FLD(SYSCFG_EXTICR3_EXTI8, 0b000); // Select PA6
     // Enable interrupts globally
-    __enable_irq();
+  
 
-    // TOD0: check
-    // Configure interrupt for falling edge of GPIO pin for button
-    // 1. Configure mask bits
-    EXTI->IMR1 |= (1 << gpioPinOffset(ENCODER_A)); // Configure the mask bit unmask PA8
-  
-    EXTI->IMR1 |= (1 << gpioPinOffset(ENCODER_B)); // Configure the mask bit unmask PA6
-    
-    // 2. enable rising edge trigger
-    EXTI->RTSR1 |= (1 << gpioPinOffset(ENCODER_A));// enable rising edge trigger
-   
-    EXTI->RTSR1 |= (1 << gpioPinOffset(ENCODER_B));// enable rising edge trigger
-   
-    // 3. Enable falling edge trigger
-    EXTI->FTSR1 |= (1 << gpioPinOffset(ENCODER_A));// Enable falling edge trigger
-  
-    EXTI->FTSR1 |= (1 << gpioPinOffset(ENCODER_B));// Enable falling edge trigger
+   // Configure EXTI mask and trigger settings
+    EXTI->IMR1  |= (1 << 6) | (1 << 8);   // Unmask EXTI6, EXTI8
+    EXTI->RTSR1 |= (1 << 6) | (1 << 8);   // Enable rising edge trigger
+    EXTI->FTSR1 |= (1 << 6) | (1 << 8);   // Enable falling edge trigger
+
+    // Clear any pending interrupts BEFORE enabling globally
+    EXTI->PR1 = (1 << 6) | (1 << 8);
+
+    // Enable EXTI lines 5–9 in NVIC (covers EXTI6 & EXTI8)
+    NVIC->ISER[0] |= (1 << EXTI9_5_IRQn);
+
+    // Enable global interrupts (safe after all setup)
+    __enable_irq();
     
     // 4. Turn on EXTI interrupt in NVIC_ISER
     NVIC->ISER[0] |= (1 << EXTI9_5_IRQn);
@@ -66,14 +65,14 @@ int main(void) {
         if (COUNT_TIM->CNT > 45000){
         off = 1;
     }
-    double rps = 0;
+    double rps = 0.0;
 
     // now evaulate rps (revolutions per sec)
     if (off) {
-    rps = 0;
+    rps = 0.0;
     } else {
     // calculate: 120 slots * 4 edges = 480
-        rps = 1/(120*4.0* (fabs(delta)/1e6));
+        rps = 1.0/(120.0*4.0* (fabs(delta)/1e6));
     }
 
     // print speed and direction
