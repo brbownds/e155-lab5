@@ -16,6 +16,8 @@
 
 #define ENCODER_A PA6
 #define ENCODER_B PA8
+#define POLLING_A PA4
+#define POLLING_B PA5
 #define DELAY_TIM TIM2
 
 

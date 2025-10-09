@@ -2,20 +2,16 @@
 // brbownds@hmc.edu
 // 10/8/2025
 
-// T=In this 
 #include "main.h"
 
-
+#define CPR   120
 #define PPR   408
 #define EDGES (PPR*4)
 
 volatile int32_t encoder_count = 0;
 volatile int delta = 0;
-volatile int prevA = 0;
-volatile int prevB = 0;
 
 
-// This is the main code
 
 int main(void) {
     // Enable GPIO for encoder pins
@@ -23,6 +19,10 @@ int main(void) {
     pinMode(ENCODER_A, GPIO_INPUT);
 
     pinMode(ENCODER_B, GPIO_INPUT);
+  
+    pinMode(POLLING_A, GPIO_OUTPUT);
+    pinMode(POLLING_B, GPIO_OUTPUT);
+
 
     // Enable pull-downs (or pull-ups depending on your wiring)
     GPIOA->PUPDR |= _VAL2FLD(GPIO_PUPDR_PUPD6, 0b10); // PA6 pull-down
@@ -58,6 +58,7 @@ int main(void) {
 
     // Main loop
     while (1) {
+togglePin(POLLING_A);
         velocity_function();
         delay_millis(TIM2, 1000);
     }
@@ -65,6 +66,8 @@ int main(void) {
 
 
 void EXTI9_5_IRQHandler(void) {
+togglePin(POLLING_B);
+
     uint32_t pending = EXTI->PR1 & ((1 << 6) | (1 << 8));
     EXTI->PR1 = pending;  // clear flags
 
@@ -89,8 +92,7 @@ void EXTI9_5_IRQHandler(void) {
 
     encoder_count += delta;
 
-    prevA = a;
-    prevB = b;
+
 }
 
 
@@ -105,7 +107,3 @@ void velocity_function(void) {
 
     encoder_count = 0;  // reset for next interval
 }
-
-
-
-
